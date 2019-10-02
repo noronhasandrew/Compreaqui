@@ -106,6 +106,24 @@ router.post('/login', async (req, res) => {
     } catch(err) {
       console.log(err);
     }
+
+    const checkResult = (result, password) => {
+      if (result.rowCount) {
+        const checkPassword = bcrypt.compareSync(password, result.rows[0].password);
+        if (checkPassword) {
+          const user = new Client(result.rows[0]);
+          try {
+            return res.status(200).json({ user, token: user.generateToken() });
+          } catch(err) {
+            console.log(err)
+          }
+        } else {
+          return res.status(400).json({ error: 'Senha inválida' });
+        }
+      } else {
+        throw new Error('Admin não encontrado');
+      }
+    }
 });
 
 router.post('/admin/login', async (req, res) => {
@@ -116,8 +134,7 @@ router.post('/admin/login', async (req, res) => {
       if (err)
         throw err;
       try {
-        let user = checkResult(result, password);
-        return res.status(200).json(user);
+        checkResult(result);
       } catch(e) {
         return res.status(400).json({ error: "Administrador não encontrado" });
       }
@@ -125,38 +142,38 @@ router.post('/admin/login', async (req, res) => {
   } catch(err) {
     console.log(err);
   }
-});
 
-const checkResult = (result, password) => {
-  if (result.rowCount) {
-    const checkPassword = bcrypt.compareSync(password, result.rows[0].password);
-    if (checkPassword) {
-      const user = new Client(result.rows[0]);
-      try {
-        return { user, token: user.generateToken() };
-      } catch(err) {
-        console.log(err)
+  const checkResult = (result, password) => {
+    if (result.rowCount) {
+      const checkPassword = bcrypt.compareSync(password, result.rows[0].password);
+      if (checkPassword) {
+        const user = new Admin(result.rows[0]);
+        try {
+          return res.status(200).json({ user, token: user.generateToken() });
+        } catch(err) {
+          console.log(err)
+        }
+      } else {
+        return res.status(400).json({ error: 'Senha inválida' });
       }
     } else {
-      return { error: 'Senha inválida' };
+      throw new Error('Admin não encontrado');
     }
-  } else {
-    throw new Error('Admin não encontrado');
   }
-}
+  
+});
 
 router.post ("/logout", async (req, res) => {
-  console.log(req.header)
-  try {
-    process.env.BLACK_LIST.push();
-  } catch(err) {
-  console.log(err)
-  }
+
 });
 
 router.use(authMiddleware);
 
 router.get("/conta", async (req, res) => {
+  
+  console.log(req.headers.authorization)
+  process.env.BLACK_LIST.push();
+
   try {
     const { isAdmin } = req;
     if (isAdmin) {
