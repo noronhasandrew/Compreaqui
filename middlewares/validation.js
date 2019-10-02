@@ -5,7 +5,7 @@ const nullEmpty = (field) => {
 }
 
 const testLogin = (login) => {
-    if (nullEmpty(login) || /^.{6,20}$/.test(login))
+    if (nullEmpty(login) || !(/^.{6,20}$/.test(login)))
         return { result: false, msg: 'Login inválido' };
     return { result: true };
 }
