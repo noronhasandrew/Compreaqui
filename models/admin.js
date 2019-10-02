@@ -6,7 +6,6 @@ class Admin {
     constructor(client) {
         this._id;
         this._name = client.name;
-        this._adress = client.adress; 
         this._email = client.email;
         this._login = client.login;
         this._password = client.password;
@@ -57,7 +56,7 @@ class Admin {
     }
 
     setPassword(password) {
-        this._password = login;
+        this._password = password;
     }
 
     generateToken() {

@@ -57,7 +57,7 @@ class Client {
     }
 
     setPassword(password) {
-        this._password = login;
+        this._password = password;
     }
 
     generateToken() {

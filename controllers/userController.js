@@ -30,7 +30,7 @@ router.post('/register', async (request, response) => {
   
     //Caso a validação não tenha erros, cliente é cadastrado
     if (!errors.length) {
-      pool.query('INSERT INTO client (id, name, adress, email, login, password) VALUES (default, $1, $2, $3, $4, $5)', [client.getName(), client.getAdress(), client.getEmail(), client.getLogin(), bcrypt.hashSync(client.getPassword(), salt)], (error, results) => {
+      pool.query('INSERT INTO client (id, name, email, login, password) VALUES (default, $1, $2, $3, $4)', [client.getName(), client.getEmail(), client.getLogin(), bcrypt.hashSync(client.getPassword(), salt)], (error, results) => {
         if (error) {
           throw error;
         }
@@ -45,13 +45,7 @@ router.post('/register', async (request, response) => {
           return false;
         }
       };
-  
-      if (fields.hasErros('password')) {
-        console.log(fields.errors['password']);
-      } else {
-        console.log('Não possui erros');
-      }
-  
+
       response.status(201).send(fields)
     }
 });
@@ -80,12 +74,6 @@ router.post('/admin/register', async (request, response) => {
       }
     };
 
-    if (fields.hasErros('password')) {
-      console.log(fields.errors['password']);
-    } else {
-      console.log('Não possui erros');
-    }
-
     response.status(201).send(fields)
   }
 });
@@ -101,11 +89,11 @@ router.post('/login', async (req, res) => {
         try {
           checkResult(result);
         } catch(e) {
-          return res.status(400).json({ error: "Usuário não encontrado" });
+          return res.status(201).json({ result: "Usuário não encontrado" });
         }
       })
     } catch(err) {
-      console.log(err);
+      return res.status(400).json({ error: "Falha ao buscar usuário" });
     }
 
     const checkResult = (result) => {
@@ -119,10 +107,10 @@ router.post('/login', async (req, res) => {
             console.log(err)
           }
         } else {
-          return res.status(400).json({ error: 'Senha inválida' });
+          return res.status(201).json({ result: 'Senha inválida' });
         }
       } else {
-        throw new Error('Admin não encontrado');
+        return res.status(201).json({ result: 'Usuário não encontrado' });
       }
     }
 });
@@ -137,11 +125,11 @@ router.post('/admin/login', async (req, res) => {
       try {
         checkResult(result);
       } catch(e) {
-        return res.status(400).json({ error: "Administrador não encontrado" });
+        return res.status(201).json({ result: "Administrador não encontrado" });
       }
     });
   } catch(err) {
-    console.log(err);
+    return res.status(400).json({ error: "Falha ao buscar administrador" });
   }
 
   const checkResult = (result) => {
@@ -155,10 +143,10 @@ router.post('/admin/login', async (req, res) => {
           console.log(err)
         }
       } else {
-        return res.status(400).json({ error: 'Senha inválida' });
+        return res.status(201).json({ result: 'Senha inválida' });
       }
     } else {
-      throw new Error('Administrador não encontrado');
+      return res.status(201).json({ result: 'Administrador não encontrado' });
     }
   }
   
