@@ -65,6 +65,7 @@ router.post('/admin/register', async (request, response) => {
   if (!errors.length) {
     pool.query('INSERT INTO administrator (id, name, email, login, password) VALUES (default, $1, $2, $3, $4)', [admin.getName(), admin.getEmail(), admin.getLogin(), bcrypt.hashSync(admin.getPassword(), salt)], (error, results) => {
       if (error) {
+        console.log(error)
         throw error;
       }
       response.status(201).send({result: results.rowCount});
@@ -98,7 +99,7 @@ router.post('/login', async (req, res) => {
         if (err)
           throw err;
         try {
-          checkResult(result, password);
+          checkResult(result);
         } catch(e) {
           return res.status(400).json({ error: "Usuário não encontrado" });
         }
@@ -107,7 +108,7 @@ router.post('/login', async (req, res) => {
       console.log(err);
     }
 
-    const checkResult = (result, password) => {
+    const checkResult = (result) => {
       if (result.rowCount) {
         const checkPassword = bcrypt.compareSync(password, result.rows[0].password);
         if (checkPassword) {
@@ -143,7 +144,7 @@ router.post('/admin/login', async (req, res) => {
     console.log(err);
   }
 
-  const checkResult = (result, password) => {
+  const checkResult = (result) => {
     if (result.rowCount) {
       const checkPassword = bcrypt.compareSync(password, result.rows[0].password);
       if (checkPassword) {
@@ -157,32 +158,24 @@ router.post('/admin/login', async (req, res) => {
         return res.status(400).json({ error: 'Senha inválida' });
       }
     } else {
-      throw new Error('Admin não encontrado');
+      throw new Error('Administrador não encontrado');
     }
   }
   
 });
 
-router.post ("/logout", async (req, res) => {
-
-});
-
 router.use(authMiddleware);
 
-router.get("/conta", async (req, res) => {
-  
-  console.log(req.headers.authorization)
-  process.env.BLACK_LIST.push();
-
+router.get("/admin/auth", async (req, res) => {
   try {
     const { isAdmin } = req;
     if (isAdmin) {
-      return res.json({ user });
+      return res.json({ result: true });
     } else {
-      return res.json( { error: "Você não é um administrador" } );
+      return res.json({ result: false });
     }
   } catch (err) {
-    return res.status(400).json({ error: "Não foi possível retornar usuário" });
+    return res.status(400).json({ error: "Não foi possível retornar resultado" });
   }
 });
 
