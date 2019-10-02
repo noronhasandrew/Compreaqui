@@ -38,7 +38,6 @@ const testAdress = (adress) => {
 exports.user = (user) => {
 
     const errors = []; //Erros dos inputs
-    console.log(testEmail(user.getEmail()));
 
     let validPassword = testPassword(user.getPassword(), 6, 20);
     let validEmail = testEmail(user.getEmail());

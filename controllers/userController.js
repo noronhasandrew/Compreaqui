@@ -30,7 +30,7 @@ router.post('/register', async (request, response) => {
   
     //Caso a validação não tenha erros, cliente é cadastrado
     if (!errors.length) {
-      pool.query('INSERT INTO client (id, name, email, login, password) VALUES (default, $1, $2, $3, $4)', [client.getName(), client.getEmail(), client.getLogin(), bcrypt.hashSync(client.getPassword(), salt)], (error, results) => {
+      pool.query('INSERT INTO client (id, name, adress, email, login, password) VALUES (default, $1, $2, $3, $4, $5)', [client.getName(), client.getAdress(), client.getEmail(), client.getLogin(), bcrypt.hashSync(client.getPassword(), salt)], (error, results) => {
         if (error) {
           throw error;
         }

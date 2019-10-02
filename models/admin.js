@@ -26,14 +26,6 @@ class Admin {
     setName(name) {
         this._name = name;
     }
-    
-    getAdress() {
-        return this._adress;
-    }
-
-    setAdress(adress) {
-        this._adress = adress;
-    }
 
     getEmail() {
         return this._email;
