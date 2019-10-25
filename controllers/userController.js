@@ -3,26 +3,20 @@ const { pool } = require('../middlewares/database-connection');
 const authMiddleware = require("../middlewares/auth");
 const Client = require('../models/client');
 const Admin = require('../models/admin');
+const Category = require('../models/category');
 const bcrypt = require('bcryptjs');
 const validate = require('../middlewares/validation');
 require('dotenv').config();
 
-const User = {
+/*const User = {
   "name": "teste03",
   "adress": "Rua X",
   "email": "andrew@gmail.com",
   "login": "andrew05",
   "password": "1234995678"
-};
+};*/
 
-/*router.post ("/login", async (request, response) => {
-    try {
-      response.json({user, token: user.generateToken()});
-    } catch(err) {
-    console.log(err)
-    }
-  });*/
-
+//Cadastra usuário comum
 router.post('/register', async (request, response) => {
     const salt = bcrypt.genSaltSync(10);
     const client = new Client(request.body)
@@ -50,6 +44,7 @@ router.post('/register', async (request, response) => {
     }
 });
 
+//Cadastra usuário administrador
 router.post('/admin/register', async (request, response) => {
   const salt = bcrypt.genSaltSync(10);
   const admin = new Admin(request.body)
@@ -78,7 +73,7 @@ router.post('/admin/register', async (request, response) => {
   }
 });
 
-
+//Faz login de usuário comum
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
 
@@ -115,6 +110,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
+//Faz login de usuário administrador
 router.post('/admin/login', async (req, res) => {
   const { login, password } = req.body;
 
@@ -152,8 +148,10 @@ router.post('/admin/login', async (req, res) => {
   
 });
 
+//A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
 router.use(authMiddleware);
 
+//Retorna se usuário é administrador ou não
 router.get("/admin/auth", async (req, res) => {
   try {
     const { isAdmin } = req;
@@ -166,5 +164,76 @@ router.get("/admin/auth", async (req, res) => {
     return res.status(400).json({ error: "Não foi possível retornar resultado" });
   }
 });
+
+//Cadastra nova categoria
+router.post('/admin/category', async (req, res) => {
+  const category = new Category(req.body)
+  try {
+    pool.query('INSERT INTO category (id, name) VALUES (default, $1)', [category.getName()], (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send({result: result.rowCount});
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao cadastrar categoria" });
+  }
+})
+
+//Retorna uma categoria de acordo com o id fornecido
+router.get('/admin/category/:id', async (req, res) => {
+  const category = new Category(req.params)
+  try {
+    pool.query('SELECT * FROM category WHERE id=$1', [category.getId()], (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar categoria" });
+  }
+})
+
+//Retorna todas as cateogorias cadastradas
+router.get('/admin/category', async (req, res) => {
+  try {
+    pool.query('SELECT * FROM category', (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar categorias" });
+  }
+})
+
+//Atualiza uma categoria de acordo com o id fornecido
+router.put('/admin/category/:id', async (req, res) => {
+  const { id, name } = {...req.params, ...req.body}
+  console.log(id, name)
+  const category = new Category({name: name, id: id})
+  try {
+    pool.query('UPDATE category SET name=$1 WHERE id=$2', [category.getName(), id], (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send({result: result.rowCount});
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao atualizar categoria" });
+  }
+})
+
+//Deleta uma categoria de acordo com o id fornecido
+router.delete('/admin/category/:id', async (req, res) => {
+  const category = new Category(req.params)
+  try {
+    pool.query('DELETE FROM category WHERE id=$1', [category.getId()], (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send({result: result.rowCount});
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar categoria" });
+  }
+})
 
 module.exports = router;
