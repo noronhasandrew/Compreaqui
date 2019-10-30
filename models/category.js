@@ -1,7 +1,7 @@
 class Category {
 
     constructor(category) {
-        this._id = category.id
+        this._id;
         this._name = category.name;
     }
 

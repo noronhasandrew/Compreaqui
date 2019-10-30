@@ -5,34 +5,34 @@ const nullEmpty = (field) => {
 }
 
 const testLogin = (login) => {
-    if (!nullEmpty(login) || !(/^.{6,20}$/.test(login)))
-        return { result: true };
-    return { result: false, msg: 'Login inválido' };
+    if (nullEmpty(login) || !(/^.{6,20}$/.test(login)))
+        return { result: false, msg: 'Login inválido' };
+    return { result: true };
 }
 
 
 const testName = (name) => {
-    if (!nullEmpty(name) || /[^a-zà-ú]/gi.test(name))
-        return { result: true };
-    return { result: false, msg: 'Nome inválido' };
+    if (nullEmpty(name) || /[^a-zà-ú]/gi.test(name))
+        return { result: false, msg: 'Nome inválido' };
+    return { result: true };
 }
 
 const testPassword = (password, min, max) => {
-    if (!nullEmpty(password) || /^\s+$/.test(password) || password.length > min || password.length < max)
-        return { result: true };
-    return { result: false, msg: `Senha inválida. Tamanho mínimo de ${min} e máximo de ${max}` };
+    if (nullEmpty(password) || /^\s+$/.test(password) || password.length < min || password.length > max)
+        return { result: false, msg: `Senha inválida. Tamanho mínimo de ${min} e máximo de ${max}` };
+    return { result: true };
 }
 
 const testEmail = (email) => {
-    if (!nullEmpty(email))
-        return { result: true };
-    return { result: false, msg: 'Email inválido' };
+    if (nullEmpty(email))
+        return { result: false, msg: 'Email inválido' };
+    return { result: true };
 }
 
 const testAdress = (adress) => {
-    if (!nullEmpty(adress))
-        return { result: true };
-    return { result: false, msg: 'Endereço inválido' };
+    if (nullEmpty(adress))
+        return { result: false, msg: 'Endereço inválido' };
+    return { result: true };
 }
 
 exports.user = (user) => {
