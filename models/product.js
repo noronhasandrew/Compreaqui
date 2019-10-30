@@ -6,7 +6,7 @@ class Product {
         this._description = product.description;
         this._amount = product.amount;
         this._price = product.price;
-        this._photo = product.photo;
+        this._photo = product.photo.filename;
     }
 
     getId() {
@@ -33,11 +33,11 @@ class Product {
         this._adress = adress;
     }
 
-    getamount() {
+    getAmount() {
         return this._amount;
     }
 
-    setamount(amount) {
+    setAmount(amount) {
         this._amount = amount;
     }
 

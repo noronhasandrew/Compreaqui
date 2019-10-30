@@ -4,17 +4,26 @@ const authMiddleware = require("../middlewares/auth");
 const Client = require('../models/client');
 const Admin = require('../models/admin');
 const Category = require('../models/category');
+const Product = require('../models/product');
+const multer = require('multer');
+const fs = require('fs')
 const bcrypt = require('bcryptjs');
 const validate = require('../middlewares/validation');
 require('dotenv').config();
 
-/*const User = {
-  "name": "teste03",
-  "adress": "Rua X",
-  "email": "andrew@gmail.com",
-  "login": "andrew05",
-  "password": "1234995678"
-};*/
+
+//Configurando storage do multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, './uploads')
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + (file.mimetype).replace('image/', '.'))
+  }
+})
+
+//Multer storage
+const upload  = multer({storage: storage})
 
 //Cadastra usuário comum
 router.post('/register', async (request, response) => {
@@ -145,8 +154,56 @@ router.post('/admin/login', async (req, res) => {
       return res.status(201).json({ result: 'Administrador não encontrado' });
     }
   }
-  
 });
+
+//Cadastra novo produto
+router.post('/admin/product', upload.single('file'), (req, res) => {
+  const obj = () => {
+    return { photo: {...req.file}, ...req.body }
+  }
+  if (!req.file)
+    return res.status(201).json({ error: "Adicione uma imagem ao seu produto" });
+
+  const product = new Product(obj())
+  console.log(product)
+  try {
+    pool.query('INSERT INTO product (id, name, description, amount, price, photo) VALUES (default, $1, $2, $3, $4, $5)', [product.getName(), product.getDescription(), product.getAmount(), product.getPrice(), product.getPhoto()], (err, result) => {
+      if (err)
+        throw err
+      res.status(201).send({result: result.rowCount});
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao cadastrar produto" });
+  }
+})
+
+//Retorna um produto de acordo com o id fornecido
+router.get('/admin/product/:id', (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('SELECT * FROM product WHERE id=$1', [ id ], (err, result) => {
+      if (err)
+        throw err
+
+      //Transforma arquivo para base64
+      const base64_encode = (file) => {
+        const bitmap = fs.readFileSync(file)
+        return new Buffer.from(bitmap).toString('base64')
+      }
+
+      //Transformando arquivo para base64
+      const productImg = result.rows[0].photo
+      result.rows[0].photo = base64_encode('./uploads/' + productImg)
+      console.log(result.rows[0])
+      
+      res.status(201).send(result.rows[0]);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao cadastrar produto" });
+  }
+})
 
 //A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
 router.use(authMiddleware);
