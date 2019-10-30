@@ -3,18 +3,14 @@ const { pool } = require('../middlewares/database-connection');
 const authMiddleware = require("../middlewares/auth");
 const Client = require('../models/client');
 const Admin = require('../models/admin');
-<<<<<<< HEAD
 const Category = require('../models/category');
 const Product = require('../models/product');
 const multer = require('multer');
 const fs = require('fs')
-=======
->>>>>>> parent of ad2fba6... Category CRUD
 const bcrypt = require('bcryptjs');
 const validate = require('../middlewares/validation');
 require('dotenv').config();
 
-<<<<<<< HEAD
 
 //Configurando storage do multer
 const storage = multer.diskStorage({
@@ -28,23 +24,6 @@ const storage = multer.diskStorage({
 
 //Multer storage
 const upload  = multer({storage: storage})
-=======
-const User = {
-  "name": "teste03",
-  "adress": "Rua X",
-  "email": "andrew@gmail.com",
-  "login": "andrew05",
-  "password": "1234995678"
-};
-
-/*router.post ("/login", async (request, response) => {
-    try {
-      response.json({user, token: user.generateToken()});
-    } catch(err) {
-    console.log(err)
-    }
-  });*/
->>>>>>> parent of ad2fba6... Category CRUD
 
 router.post('/register', async (request, response) => {
     const salt = bcrypt.genSaltSync(10);
@@ -174,7 +153,6 @@ router.post('/admin/login', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 //Cadastra novo produto
 router.post('/admin/product', upload.single('file'), (req, res) => {
   const obj = () => {
@@ -225,8 +203,6 @@ router.get('/admin/product/:id', (req, res) => {
 })
 
 //A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
-=======
->>>>>>> parent of ad2fba6... Category CRUD
 router.use(authMiddleware);
 
 router.get("/admin/auth", async (req, res) => {
