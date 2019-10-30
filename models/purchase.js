@@ -1,7 +1,7 @@
 class Purchase {
 
     constructor(purchase) {
-        this._id;
+        this._id = purchase.id;
         this._date_hour = purchase.date_hour;
     }
 

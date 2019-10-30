@@ -4,7 +4,7 @@ require('dotenv').config();
 class Client {
 
     constructor(client) {
-        this._id;
+        this._id = client.id;
         this._name = client.name;
         this._adress = client.adress; 
         this._email = client.email;

@@ -1,7 +1,7 @@
 class Product {
 
     constructor(product) {
-        this._id;
+        this._id = product.id;
         this._name = product.name;
         this._description = product.description;
         this._amount = product.amount;

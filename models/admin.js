@@ -4,7 +4,7 @@ require('dotenv').config();
 class Admin {
 
     constructor(client) {
-        this._id;
+        this._id = client.id;
         this._name = client.name;
         this._email = client.email;
         this._login = client.login;

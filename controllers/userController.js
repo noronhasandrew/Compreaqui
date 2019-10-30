@@ -12,6 +12,7 @@ const validate = require('../middlewares/validation');
 require('dotenv').config();
 
 
+
 //Configurando storage do multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -24,6 +25,12 @@ const storage = multer.diskStorage({
 
 //Multer storage
 const upload  = multer({storage: storage})
+
+//Transforma arquivo para base64
+const base64_encode = (file) => {
+  const bitmap = fs.readFileSync(file)
+  return new Buffer.from(bitmap).toString('base64')
+}
 
 //Cadastra usuário comum
 router.post('/register', async (request, response) => {
@@ -182,19 +189,13 @@ router.post('/admin/product', upload.single('file'), (req, res) => {
 router.get('/admin/product/:id', (req, res) => {
   const { id } = req.params
   try {
-    pool.query('SELECT * FROM product WHERE id=$1', [ id ], (err, result) => {
+    pool.query('SELECT * FROM product WHERE id = $1', [ id ], (err, result) => {
       if (err)
         throw err
 
-      //Transforma arquivo para base64
-      const base64_encode = (file) => {
-        const bitmap = fs.readFileSync(file)
-        return new Buffer.from(bitmap).toString('base64')
-      }
-
       //Transformando arquivo para base64
-      const productImg = result.rows[0].photo
-      result.rows[0].photo = base64_encode('./uploads/' + productImg)
+      const imgName = result.rows[0].photo
+      result.rows[0].photo = base64_encode('./uploads/' + imgName)
       console.log(result.rows[0])
       
       res.status(201).send(result.rows[0]);
@@ -249,11 +250,30 @@ router.post('/admin/category', async (req, res) => {
   }
 })
 
+//Retorna uma categoria de acordo com o id fornecido e seus produtos
+router.get('/admin/category-products/:id', async (req, res) => {
+  const category = new Category(req.params)
+  try {
+    pool.query('SELECT * FROM category, product WHERE category.id = product.category AND category.id = $1', [category.getId()], (err, result) => {
+      if (err)
+        throw err;
+
+      result.rows.map((value, index) => {
+        var imgName = value.photo
+        result.rows[index].photo = base64_encode('./uploads/' + imgName)
+      })
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar categoria" });
+  }
+})
+
 //Retorna uma categoria de acordo com o id fornecido
 router.get('/admin/category/:id', async (req, res) => {
   const category = new Category(req.params)
   try {
-    pool.query('SELECT * FROM category WHERE id=$1', [category.getId()], (err, result) => {
+    pool.query('SELECT * FROM category WHERE id = $1', [category.getId()], (err, result) => {
       if (err)
         throw err;
       res.status(201).send(result.rows);
@@ -269,7 +289,7 @@ router.put('/admin/category/:id', async (req, res) => {
   console.log(id, name)
   const category = new Category({name: name, id: id})
   try {
-    pool.query('UPDATE category SET name=$1 WHERE id=$2', [category.getName(), id], (err, result) => {
+    pool.query('UPDATE category SET name = $1 WHERE id = $2', [category.getName(), id], (err, result) => {
       if (err)
         throw err;
       res.status(201).send({result: result.rowCount});
@@ -283,7 +303,7 @@ router.put('/admin/category/:id', async (req, res) => {
 router.delete('/admin/category/:id', async (req, res) => {
   const category = new Category(req.params)
   try {
-    pool.query('DELETE FROM category WHERE id=$1', [category.getId()], (err, result) => {
+    pool.query('DELETE FROM category WHERE id = $1', [category.getId()], (err, result) => {
       if (err)
         throw err;
       res.status(201).send({result: result.rowCount});
