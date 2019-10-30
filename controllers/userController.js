@@ -205,6 +205,19 @@ router.get('/admin/product/:id', (req, res) => {
   }
 })
 
+//Retorna todas as cateogorias cadastradas
+router.get('/category', async (req, res) => {
+  try {
+    pool.query('SELECT * FROM category', (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar categorias" });
+  }
+})
+
 //A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
 router.use(authMiddleware);
 
@@ -247,19 +260,6 @@ router.get('/admin/category/:id', async (req, res) => {
     })
   } catch(err) {
       res.status(400).json({ error: "Falha ao retornar categoria" });
-  }
-})
-
-//Retorna todas as cateogorias cadastradas
-router.get('/admin/category', async (req, res) => {
-  try {
-    pool.query('SELECT * FROM category', (err, result) => {
-      if (err)
-        throw err;
-      res.status(201).send(result.rows);
-    })
-  } catch(err) {
-      res.status(400).json({ error: "Falha ao retornar categorias" });
   }
 })
 
