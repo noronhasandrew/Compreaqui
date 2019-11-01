@@ -197,6 +197,24 @@ router.get('/products', (req, res) => {
   }
 })
 
+//Retorna todas as cateogorias e seus produtos
+router.get('/categories-products', async (req, res) => {
+  try {
+    pool.query('SELECT * FROM category, product WHERE category.id = product.category', (err, result) => {
+      if (err)
+        throw err;
+
+      result.rows.map((value, index) => {
+        var imgName = value.photo
+        result.rows[index].photo = base64_encode('./uploads/' + imgName)
+      })
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar categoria" });
+  }
+})
+
 
 
 
@@ -298,7 +316,7 @@ router.post('/admin/category', async (req, res) => {
 })
 
 //Retorna uma categoria de acordo com o id fornecido e seus produtos
-router.get('/admin/category-products/:id', async (req, res) => {
+router.get('/admin/category-products', async (req, res) => {
   const category = new Category(req.params)
   try {
     pool.query('SELECT * FROM category, product WHERE category.id = product.category AND category.id = $1', [category.getId()], (err, result) => {
