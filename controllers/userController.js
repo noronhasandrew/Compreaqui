@@ -163,6 +163,22 @@ router.post('/admin/login', async (req, res) => {
   }
 });
 
+//Retorna todas as cateogorias cadastradas
+router.get('/category', async (req, res) => {
+  try {
+    pool.query('SELECT * FROM category', (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar categorias" });
+  }
+})
+
+//A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
+router.use(authMiddleware);
+
 //Cadastra novo produto
 router.post('/admin/product', upload.single('file'), (req, res) => {
   const obj = () => {
@@ -205,36 +221,6 @@ router.get('/admin/product/:id', (req, res) => {
       res.status(400).json({ error: "Falha ao cadastrar produto" });
   }
 })
-
-//Retorna todas as cateogorias cadastradas
-router.get('/category', async (req, res) => {
-  try {
-    pool.query('SELECT * FROM category', (err, result) => {
-      if (err)
-        throw err;
-      res.status(201).send(result.rows);
-    })
-  } catch(err) {
-      res.status(400).json({ error: "Falha ao retornar categorias" });
-  }
-})
-
-//A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
-router.use(authMiddleware);
-
-//Retorna se usuário é administrador ou não
-router.get("/admin/auth", async (req, res) => {
-  try {
-    const { isAdmin } = req;
-    if (isAdmin) {
-      return res.json({ result: true });
-    } else {
-      return res.json({ result: false });
-    }
-  } catch (err) {
-    return res.status(400).json({ error: "Não foi possível retornar resultado" });
-  }
-});
 
 //Cadastra nova categoria
 router.post('/admin/category', async (req, res) => {
@@ -312,5 +298,20 @@ router.delete('/admin/category/:id', async (req, res) => {
       res.status(400).json({ error: "Falha ao deletar categoria" });
   }
 })
+
+//Retorna se usuário é administrador ou não
+router.get("/admin/auth", async (req, res) => {
+  try {
+    const { isAdmin } = req;
+    if (isAdmin) {
+      return res.json({ result: true });
+    } else {
+      return res.json({ result: false });
+    }
+  } catch (err) {
+    return res.status(400).json({ error: "Não foi possível retornar resultado" });
+  }
+});
+
 
 module.exports = router;
