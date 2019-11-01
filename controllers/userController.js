@@ -176,8 +176,69 @@ router.get('/category', async (req, res) => {
   }
 })
 
+//Retorna todos os produtos cadastrados
+router.get('/products', (req, res) => {
+  try {
+    pool.query('SELECT * FROM product', (err, result) => {
+      if (err)
+        throw err
+
+
+      result.rows.map((value, index) => {
+        var imgName = value.photo
+        result.rows[index].photo = base64_encode('./uploads/' + imgName)
+      })
+      
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao cadastrar produto" });
+  }
+})
+
+
+
+
 //A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
 router.use(authMiddleware);
+
+
+
+
+//Deleta um produto de acordo com o id fornecido
+router.delete('/admin/product/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('DELETE FROM product WHERE id = $1', [ id ], (err, result) => {
+      if (err)
+        throw err;
+      res.send(result.rowCount);
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar produto" });
+  }
+})
+
+//Atualiza um produto de acordo com o id fornecido
+router.put('/admin/product/:id', upload.single('file'), (req, res) => {
+  const { id } = req.params
+  const obj = () => {
+    return { id: id, photo: {...req.file}, ...req.body }
+  }
+  const product = new Product(obj())
+  console.log(product)
+  try {
+    pool.query('UPDATE product SET name = $1, description = $2, amount = $3, price = $4, photo = $5 WHERE id = $6', [ product.getName(), product.getDescription(), product.getAmount(), product.getPrice(), product.getPhoto(), id ], (err, result) => {
+      if (err)
+        throw err
+      res.status(200).send({ result: result.rowCount });
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao atualizar produto" });
+  }
+})
 
 //Cadastra novo produto
 router.post('/admin/product', upload.single('file'), (req, res) => {
@@ -193,7 +254,7 @@ router.post('/admin/product', upload.single('file'), (req, res) => {
     pool.query('INSERT INTO product (id, name, description, amount, price, photo) VALUES (default, $1, $2, $3, $4, $5)', [product.getName(), product.getDescription(), product.getAmount(), product.getPrice(), product.getPhoto()], (err, result) => {
       if (err)
         throw err
-      res.status(201).send({result: result.rowCount});
+      res.status(201).send({ result: result.rowCount });
     })
   } catch(err) {
       console.log(err)
