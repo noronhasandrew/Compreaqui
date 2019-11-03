@@ -311,15 +311,34 @@ router.get('/admin/categories-products', async (req, res) => {
   }
 })
 
+//Deleta da tabela product_category de acordo com o id fornecido
+router.delete('/admin/product/product-category/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('DELETE FROM product_category WHERE product_id = $1', [ id ], (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send({result: result.rowCount});
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar categoria" });
+  }
+})
+
 //Deleta um produto de acordo com o id fornecido
 router.delete('/admin/product/:id', async (req, res) => {
   const { id } = req.params
   try {
-    pool.query('DELETE FROM product WHERE id = $1', [ id ], (err, result) => {
-      if (err)
-        throw err;
-      res.send(result.rowCount);
-    })
+    axios({ method: 'DELETE', url: `http://localhost:3000/api/admin/product/product-category/${ id }`, headers: { authorization: req.headers.authorization }}).then(
+      (response)=>{
+        if (response.data.result) {
+          pool.query('DELETE FROM product WHERE id = $1', [ id ], (err, result) => {
+            if (err)
+              throw err;
+            res.status(200).send({ result: result.rowCount });
+          })
+        }
+      })
   } catch(err) {
       res.status(400).json({ error: "Falha ao deletar produto" });
   }
@@ -410,14 +429,33 @@ router.put('/admin/category/:id', async (req, res) => {
   }
 })
 
+//Deleta da tabela product_category de acordo com o id fornecido
+router.delete('/admin/category/product-category/:id', async (req, res) => {
+  const category = new Category(req.params)
+  try {
+    pool.query('DELETE FROM product_category WHERE category_id = $1', [category.getId()], (err, result) => {
+      if (err)
+        throw err;
+      res.status(201).send({result: result.rowCount});
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar categoria" });
+  }
+})
+
 //Deleta uma categoria de acordo com o id fornecido
 router.delete('/admin/category/:id', async (req, res) => {
   const category = new Category(req.params)
   try {
-    pool.query('DELETE FROM category WHERE id = $1', [category.getId()], (err, result) => {
-      if (err)
-        throw err;
-      res.status(201).send({result: result.rowCount});
+    axios({ method: 'DELETE', url: `http://localhost:3000/api/admin/category/product-category/${category.getId()}`, headers: { authorization: req.headers.authorization }}).then(
+      (response)=>{
+        if (response.data.result) {
+          pool.query('DELETE FROM category WHERE id = $1', [category.getId()], (err, result) => {
+            if (err)
+              throw err;
+            res.status(201).send({result: result.rowCount});
+          })
+        }
     })
   } catch(err) {
       res.status(400).json({ error: "Falha ao deletar categoria" });
