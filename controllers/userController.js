@@ -284,28 +284,30 @@ router.post('/admin/product', upload.single('file'), (req, res) => {
 
 //Retorna todos as categorias e seus respectivos produtos
 router.get('/admin/categories-products', async (req, res) => {
-  const category = new Category(req.params)
   try {
     axios.get('http://localhost:3000/api/categories').then(
+      (response) => {
+        categories = response.data
+        addProducts()
+      }).catch((e) => {
+          console.log(e)
+      })
+
+    function addProducts() {
+      var cont = 0
+      categories.map((value) => {
+        axios.get(`http://localhost:3000/api/category-products/${value.id}`).then(
           (response) => {
-            var categories = response.data
-
-            categories.map((value, index) => {
-              axios.get(`http://localhost:3000/api/category-products/${categories[index].id}`).then(
-                (response) => {
-                  return products = response.data
-                }).then((products) => {
-                  categories[index].products = products
-                }).catch((e) => {
-                  console.log(e)
-                })
-            })
-            
-            res.status(201).send(categories);
-
+            var products = response.data
+            value.products = products
+            cont++
+            if (cont >= categories.length)
+               return res.status(200).send(categories);
           }).catch((e) => {
-              console.log(e)
-        })
+            console.log(e)
+          })
+      })
+    }
   } catch(err) {
       res.status(400).json({ error: "Falha ao retornar categorias e produtos" });
   }
