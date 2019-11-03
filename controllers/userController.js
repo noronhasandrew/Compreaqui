@@ -266,7 +266,7 @@ router.post('/admin/product', upload.single('file'), (req, res) => {
       const { categories } = req.body
       
       categories.map((value) => {
-        axios.post('http://localhost:3000/api/admin/product_category_insert', { product_id: product_id, category_id: parseInt(value) }).then(
+        axios({ method: 'POST', url: 'http://localhost:3000/api/admin/product_category_insert', headers: { authorization: req.headers.authorization }, data: { product_id: product_id, category_id: parseInt(value) }}).then(
           (response) => {
             console.log(response.data)
           }).catch((e) => {
