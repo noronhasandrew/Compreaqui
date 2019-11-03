@@ -6,6 +6,7 @@ const Admin = require('../models/admin');
 const Category = require('../models/category');
 const Product = require('../models/product');
 const multer = require('multer');
+const axios = require('axios')
 const fs = require('fs')
 const bcrypt = require('bcryptjs');
 const validate = require('../middlewares/validation');
@@ -217,12 +218,63 @@ router.get('/categories-products', async (req, res) => {
 
 
 
-
 //A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
 router.use(authMiddleware);
 
 
 
+//Adiciona categorias a produto cadastrado
+router.post('/admin/product_category_insert', (req, res) => {
+  const { product_id, category_id } = req.body
+  try {
+    pool.query('INSERT INTO product_category (product_id, category_id) VALUES ($1, $2)', [ product_id, category_id ], (err, result) => {
+      if (err)
+        throw err
+      res.status(201).send({ result: result.rowCount });
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao cadastrar produto" });
+  }
+})
+
+//Cadastra novo produto
+router.post('/admin/product', upload.single('file'), (req, res) => {
+  const obj = () => {
+    return { photo: {...req.file}, ...req.body }
+  }
+
+  if (!req.file)
+    return res.status(201).json({ error: "Adicione uma imagem ao seu produto" });
+
+  const product = new Product(obj())
+  console.log(product)
+
+  try {
+    pool.query('INSERT INTO product (id, name, description, amount, price, photo) VALUES (default, $1, $2, $3, $4, $5) RETURNING id', [product.getName(), product.getDescription(), product.getAmount(), product.getPrice(), product.getPhoto()], (err, result) => {
+      if (err)
+        throw err
+
+      const product_id = (result.rows[0].id)
+      const { categories } = req.body
+      
+      categories.map((value) => {
+        axios.post('http://localhost:3000/api/admin/product_category_insert', { product_id: product_id, category_id: parseInt(value) }).then(
+          (response) => {
+            console.log(response.data)
+          }
+        ).catch((e) => {
+          console.log(e)
+        })
+      })
+
+      res.status(201).send({ result: result.rowCount });
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao cadastrar produto" });
+  }
+})
 
 //Deleta um produto de acordo com o id fornecido
 router.delete('/admin/product/:id', async (req, res) => {
@@ -255,28 +307,6 @@ router.put('/admin/product/:id', upload.single('file'), (req, res) => {
   } catch(err) {
       console.log(err)
       res.status(400).json({ error: "Falha ao atualizar produto" });
-  }
-})
-
-//Cadastra novo produto
-router.post('/admin/product', upload.single('file'), (req, res) => {
-  const obj = () => {
-    return { photo: {...req.file}, ...req.body }
-  }
-  if (!req.file)
-    return res.status(201).json({ error: "Adicione uma imagem ao seu produto" });
-
-  const product = new Product(obj())
-  console.log(product)
-  try {
-    pool.query('INSERT INTO product (id, name, description, amount, price, photo) VALUES (default, $1, $2, $3, $4, $5)', [product.getName(), product.getDescription(), product.getAmount(), product.getPrice(), product.getPhoto()], (err, result) => {
-      if (err)
-        throw err
-      res.status(201).send({ result: result.rowCount });
-    })
-  } catch(err) {
-      console.log(err)
-      res.status(400).json({ error: "Falha ao cadastrar produto" });
   }
 })
 
