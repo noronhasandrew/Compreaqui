@@ -165,7 +165,7 @@ router.post('/admin/login', async (req, res) => {
 });
 
 //Retorna todas as cateogorias cadastradas
-router.get('/category', async (req, res) => {
+router.get('/categories', async (req, res) => {
   try {
     pool.query('SELECT * FROM category', (err, result) => {
       if (err)
@@ -194,14 +194,15 @@ router.get('/products', (req, res) => {
     })
   } catch(err) {
       console.log(err)
-      res.status(400).json({ error: "Falha ao cadastrar produto" });
+      res.status(400).json({ error: "Falha ao retornar produtos" });
   }
 })
 
-//Retorna todas as cateogorias e seus produtos
-router.get('/categories-products', async (req, res) => {
+//Retorna todos os produtos de uma categoria de acordo com o id fornecido
+router.get('/category-products/:id', async (req, res) => {
+  const category = new Category(req.params)
   try {
-    pool.query('SELECT * FROM category, product WHERE category.id = product.category', (err, result) => {
+    pool.query('SELECT * FROM product_category as pc, product as p WHERE pc.product_id = p.id AND pc.category_id = $1', [category.getId()], (err, result) => {
       if (err)
         throw err;
 
@@ -212,14 +213,20 @@ router.get('/categories-products', async (req, res) => {
       res.status(201).send(result.rows);
     })
   } catch(err) {
-      res.status(400).json({ error: "Falha ao retornar categoria" });
+      res.status(400).json({ error: "Falha ao retornar produtos de categoria" });
   }
 })
 
 
 
+
+
+
 //A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
 router.use(authMiddleware);
+
+
+
 
 
 
@@ -234,7 +241,7 @@ router.post('/admin/product_category_insert', (req, res) => {
     })
   } catch(err) {
       console.log(err)
-      res.status(400).json({ error: "Falha ao cadastrar produto" });
+      res.status(400).json({ error: "Falha ao adicionar categorias" });
   }
 })
 
@@ -262,8 +269,7 @@ router.post('/admin/product', upload.single('file'), (req, res) => {
         axios.post('http://localhost:3000/api/admin/product_category_insert', { product_id: product_id, category_id: parseInt(value) }).then(
           (response) => {
             console.log(response.data)
-          }
-        ).catch((e) => {
+          }).catch((e) => {
           console.log(e)
         })
       })
@@ -273,6 +279,35 @@ router.post('/admin/product', upload.single('file'), (req, res) => {
   } catch(err) {
       console.log(err)
       res.status(400).json({ error: "Falha ao cadastrar produto" });
+  }
+})
+
+//Retorna todos as categorias e seus respectivos produtos
+router.get('/admin/categories-products', async (req, res) => {
+  const category = new Category(req.params)
+  try {
+    axios.get('http://localhost:3000/api/categories').then(
+          (response) => {
+            var categories = response.data
+
+            categories.map((value, index) => {
+              axios.get(`http://localhost:3000/api/category-products/${categories[index].id}`).then(
+                (response) => {
+                  return products = response.data
+                }).then((products) => {
+                  categories[index].products = products
+                }).catch((e) => {
+                  console.log(e)
+                })
+            })
+            
+            res.status(201).send(categories);
+
+          }).catch((e) => {
+              console.log(e)
+        })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar categorias e produtos" });
   }
 })
 
@@ -342,25 +377,6 @@ router.post('/admin/category', async (req, res) => {
     })
   } catch(err) {
       res.status(400).json({ error: "Falha ao cadastrar categoria" });
-  }
-})
-
-//Retorna uma categoria de acordo com o id fornecido e seus produtos
-router.get('/admin/category-products', async (req, res) => {
-  const category = new Category(req.params)
-  try {
-    pool.query('SELECT * FROM category, product WHERE category.id = product.category AND category.id = $1', [category.getId()], (err, result) => {
-      if (err)
-        throw err;
-
-      result.rows.map((value, index) => {
-        var imgName = value.photo
-        result.rows[index].photo = base64_encode('./uploads/' + imgName)
-      })
-      res.status(201).send(result.rows);
-    })
-  } catch(err) {
-      res.status(400).json({ error: "Falha ao retornar categoria" });
   }
 })
 
