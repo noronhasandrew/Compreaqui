@@ -33,9 +33,10 @@ const base64_encode = (file) => {
   return new Buffer.from(bitmap).toString('base64')
 }
 
+const salt = bcrypt.genSaltSync(10);
+
 //Cadastra usuário comum
 router.post('/register', async (request, response) => {
-    const salt = bcrypt.genSaltSync(10);
     const client = new Client(request.body)
     const errors = validate.user(client); //Erros dos inputs
   
@@ -230,6 +231,104 @@ router.use(authMiddleware);
 
 
 
+//Atualiza senha de acordo com o id fornecido
+router.put('/user-password/:id', async (req, res) => {
+  const { id } = req.params
+  const { currentPassword, newPassword, confirmPassword } = req.body
+
+  if (newPassword == confirmPassword) {
+    try {
+      pool.query('SELECT password FROM administrator WHERE id = $1', [ parseInt(id) ], (err, result) => {
+        if (err)
+          throw err
+        const realPassword = result.rows[0].password
+        if (bcrypt.compareSync(currentPassword, realPassword)) {
+          updatePassword()
+        } else {
+          return res.status(201).send({ error: "Senha incorreta" });
+        }
+      })
+    } catch(e) {
+      console.log(e)
+    }
+  }
+
+  function updatePassword() {
+    try {
+      axios({ method: 'GET', url: 'http://localhost:3000/api/admin/auth', headers: { authorization: req.headers.authorization }}).then(
+        (response)=>{
+          if (response.data.result) {
+            pool.query('UPDATE administrator SET password = $1 WHERE id = $2', [ bcrypt.hashSync(newPassword, salt), id ], (err, result) => {
+              if (err)
+                throw err
+              res.status(201).send({ result: result.rowCount });
+            })
+          } else {
+            pool.query('UPDATE client SET password = $1 WHERE id = $2', [  bcrypt.hashSync(newPassword, salt), id ], (err, result) => {
+              if (err)
+                throw err
+              res.status(201).send({ result: result.rowCount });
+            })
+          }
+        })
+    } catch(err) {
+        res.status(400).json({ error: "Falha ao deletar usuário" });
+    }
+  }
+})
+
+//Atualiza usuário de acordo com o id fornecido
+router.put('/user/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    axios({ method: 'GET', url: 'http://localhost:3000/api/admin/auth', headers: { authorization: req.headers.authorization }}).then(
+      (response)=>{
+        if (response.data.result) {
+          const admin = new Admin({ id: id, ...req.body })
+          pool.query('UPDATE administrator SET name = $1, email = $2, login = $3 WHERE id = $4', [ admin.getName(), admin.getEmail(), admin.getLogin(), admin.getId() ], (err, result) => {
+            if (err)
+              throw err
+            res.status(201).send({ result: result.rowCount });
+          })
+        } else {
+          const client = new Client({ id: id, ...req.body })
+          pool.query('UPDATE client SET name = $1, adress = $2 email = $3, login = $4 WHERE id = $5', [ client.getName(), client.getAdress(), client.getEmail(), client.getLogin(), client.getId() ], (err, result) => {
+            if (err)
+              throw err
+            res.status(201).send({ result: result.rowCount });
+          })
+        }
+      })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar usuário" });
+  }
+})
+
+//Deleta usuário de acordo com o id fornecido
+router.delete('/user/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    axios({ method: 'GET', url: 'http://localhost:3000/api/admin/auth', headers: { authorization: req.headers.authorization }}).then(
+      (response)=>{
+        if (response.data.result) {
+          pool.query('DELETE FROM administrator WHERE id = $1', [ id ], (err, result) => {
+            if (err)
+              throw err
+            res.status(201).send({ result: result.rowCount });
+          })
+        } else {
+          pool.query('DELETE FROM client WHERE id = $1', [ id ], (err, result) => {
+            if (err)
+              throw err
+            res.status(201).send({ result: result.rowCount });
+          })
+        }
+      })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar usuário" });
+  }
+})
+
 //Adiciona categorias a produto cadastrado
 router.post('/admin/product_category_insert', (req, res) => {
   const { product_id, category_id } = req.body
@@ -287,13 +386,13 @@ router.get('/admin/categories-products', async (req, res) => {
   try {
     axios.get('http://localhost:3000/api/categories').then(
       (response) => {
-        categories = response.data
-        addProducts()
+        var categories = response.data
+        addProducts(categories)
       }).catch((e) => {
           console.log(e)
       })
 
-    function addProducts() {
+    function addProducts(categories) {
       var cont = 0
       categories.map((value) => {
         axios.get(`http://localhost:3000/api/category-products/${value.id}`).then(

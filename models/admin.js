@@ -3,12 +3,12 @@ require('dotenv').config();
 
 class Admin {
 
-    constructor(client) {
-        this._id = client.id;
-        this._name = client.name;
-        this._email = client.email;
-        this._login = client.login;
-        this._password = client.password;
+    constructor(admin) {
+        this._id = admin.id;
+        this._name = admin.name;
+        this._email = admin.email;
+        this._login = admin.login;
+        this._password = admin.password;
     }
 
     getId() {
