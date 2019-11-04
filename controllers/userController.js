@@ -443,7 +443,7 @@ router.delete('/admin/product/product-category/:id', async (req, res) => {
 })
 
 function deleteFile(result) {
-  fs.unlink('C:/Users/andre/Desktop/compreaqui3/Compreaqui/uploads/' + result.rows[0].photo, (err) => {
+  fs.unlink(process.env.UPLOAD_DIR + result.rows[0].photo, (err) => {
     if (err) {
         console.log("failed to delete local image:"+err);
     } else {
