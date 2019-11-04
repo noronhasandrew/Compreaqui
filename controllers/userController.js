@@ -530,11 +530,11 @@ router.put('/admin/category/:id', async (req, res) => {
   }
 })
 
-//Deleta da tabela product_category de acordo com o id fornecido
-router.delete('/admin/category/product-category/:id', async (req, res) => {
+//Retorna de product_category de acordo com o id fornecido
+router.get('/admin/category/product-category/:id', async (req, res) => {
   const category = new Category(req.params)
   try {
-    pool.query('DELETE FROM product_category WHERE category_id = $1', [category.getId()], (err, result) => {
+    pool.query('SELECT * FROM product_category WHERE category_id = $1', [category.getId()], (err, result) => {
       if (err)
         throw err;
       res.status(201).send({result: result.rowCount});
@@ -548,14 +548,16 @@ router.delete('/admin/category/product-category/:id', async (req, res) => {
 router.delete('/admin/category/:id', async (req, res) => {
   const category = new Category(req.params)
   try {
-    axios({ method: 'DELETE', url: `http://localhost:3000/api/admin/category/product-category/${category.getId()}`, headers: { authorization: req.headers.authorization }}).then(
+    axios({ method: 'GET', url: `http://localhost:3000/api/admin/category/product-category/${category.getId()}`, headers: { authorization: req.headers.authorization }}).then(
       (response)=>{
-        if (response.data.result) {
+        if (!response.data.result) {
           pool.query('DELETE FROM category WHERE id = $1', [category.getId()], (err, result) => {
             if (err)
               throw err;
-            res.status(201).send({result: result.rowCount});
+            res.status(201).send({ result: result.rowCount });
           })
+        } else {
+          res.status(201).send({ result: 0 });
         }
     })
   } catch(err) {
