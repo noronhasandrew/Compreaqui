@@ -236,44 +236,60 @@ router.put('/user-password/:id', async (req, res) => {
   const { id } = req.params
   const { currentPassword, newPassword, confirmPassword } = req.body
 
-  if (newPassword == confirmPassword) {
-    try {
-      pool.query('SELECT password FROM administrator WHERE id = $1', [ parseInt(id) ], (err, result) => {
-        if (err)
-          throw err
-        const realPassword = result.rows[0].password
-        if (bcrypt.compareSync(currentPassword, realPassword)) {
-          updatePassword()
-        } else {
-          return res.status(201).send({ error: "Senha incorreta" });
-        }
-      })
-    } catch(e) {
-      console.log(e)
-    }
+  function checkPassword(result) {
+    const realPassword = result.rows[0].password
+    if (bcrypt.compareSync(currentPassword, realPassword))
+      return true
+    return false
   }
 
-  function updatePassword() {
-    try {
-      axios({ method: 'GET', url: 'http://localhost:3000/api/admin/auth', headers: { authorization: req.headers.authorization }}).then(
-        (response)=>{
-          if (response.data.result) {
-            pool.query('UPDATE administrator SET password = $1 WHERE id = $2', [ bcrypt.hashSync(newPassword, salt), id ], (err, result) => {
-              if (err)
-                throw err
-              res.status(201).send({ result: result.rowCount });
-            })
-          } else {
-            pool.query('UPDATE client SET password = $1 WHERE id = $2', [  bcrypt.hashSync(newPassword, salt), id ], (err, result) => {
-              if (err)
-                throw err
-              res.status(201).send({ result: result.rowCount });
-            })
+  try {
+    axios({ method: 'GET', url: 'http://localhost:3000/api/admin/auth', headers: { authorization: req.headers.authorization }}).then(
+      (response)=>{
+        if (response.data.result) {
+
+          if (newPassword == confirmPassword) {
+            try {
+              pool.query('SELECT password FROM administrator WHERE id = $1', [ parseInt(id) ], (err, result) => {
+                if (err)
+                  throw err
+                if (checkPassword(result)) {
+                  pool.query('UPDATE administrator SET password = $1 WHERE id = $2', [ bcrypt.hashSync(newPassword, salt), id ], (err, result) => {
+                    if (err)
+                      throw err
+                    return res.status(201).send({ result: result.rowCount });
+                  })
+                } else {
+                  return res.status(201).send({ error: "Senha incorreta" });
+                }
+              })
+            } catch(e) {
+              console.log(e)
+            }
           }
-        })
-    } catch(err) {
-        res.status(400).json({ error: "Falha ao deletar usuário" });
-    }
+
+        } else {
+          try {
+            pool.query('SELECT password FROM client WHERE id = $1', [ parseInt(id) ], (err, result) => {
+              if (err)
+                throw err
+              if (checkPassword(result)) {
+                pool.query('UPDATE client SET password = $1 WHERE id = $2', [  bcrypt.hashSync(newPassword, salt), id ], (err, result) => {
+                  if (err)
+                    throw err
+                  return res.status(201).send({ result: result.rowCount });
+                })
+              } else {
+                return res.status(201).send({ error: "Senha incorreta" });
+              }
+            })
+          } catch(e) {
+            console.log(e)
+          }
+        }
+      })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar usuário" });
   }
 })
 
