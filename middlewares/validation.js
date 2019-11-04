@@ -12,7 +12,7 @@ const testLogin = (login) => {
 
 
 const testName = (name) => {
-    if (!nullEmpty(name) && !/[^a-zà-ú]/gi.test(name))
+    if (!nullEmpty(name))
         return { result: true };
     return { result: false, msg: 'Nome inválido' };
 }
