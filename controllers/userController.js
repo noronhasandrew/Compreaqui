@@ -442,6 +442,16 @@ router.delete('/admin/product/product-category/:id', async (req, res) => {
   }
 })
 
+function deleteFile(result) {
+  fs.unlink('C:/Users/andre/Desktop/compreaqui3/Compreaqui/uploads/' + result.rows[0].photo, (err) => {
+    if (err) {
+        console.log("failed to delete local image:"+err);
+    } else {
+        console.log('successfully deleted local image');                                
+    }
+  })
+}
+
 //Deleta um produto de acordo com o id fornecido
 router.delete('/admin/product/:id', async (req, res) => {
   const { id } = req.params
@@ -449,9 +459,10 @@ router.delete('/admin/product/:id', async (req, res) => {
     axios({ method: 'DELETE', url: `http://localhost:3000/api/admin/product/product-category/${ id }`, headers: { authorization: req.headers.authorization }}).then(
       (response)=>{
         if (response.data.result) {
-          pool.query('DELETE FROM product WHERE id = $1', [ id ], (err, result) => {
+          pool.query('DELETE FROM product WHERE id = $1 RETURNING photo', [ id ], (err, result) => {
             if (err)
               throw err;
+            deleteFile(result)
             res.status(200).send({ result: result.rowCount });
           })
         }
@@ -470,10 +481,19 @@ router.put('/admin/product/:id', upload.single('file'), (req, res) => {
   const product = new Product(obj())
   console.log(product)
   try {
-    pool.query('UPDATE product SET name = $1, description = $2, amount = $3, price = $4, photo = $5 WHERE id = $6', [ product.getName(), product.getDescription(), product.getAmount(), product.getPrice(), product.getPhoto(), id ], (err, result) => {
+    pool.query('SELECT photo from product WHERE id = $1', [ id ], (err, result) => {
       if (err)
         throw err
-      res.status(200).send({ result: result.rowCount });
+      deleteFile(result)
+      if (result.rowCount) {
+        pool.query('UPDATE product SET name = $1, description = $2, amount = $3, price = $4, photo = $5 WHERE id = $6', [ product.getName(), product.getDescription(), product.getAmount(), product.getPrice(), product.getPhoto(), id ], (err, result) => {
+          if (err)
+            throw err
+          res.status(200).send({ result: result.rowCount });
+        })
+      } else {
+        res.status(201).send({ error: "Falha ao atualizar produto" });
+      }
     })
   } catch(err) {
       console.log(err)
