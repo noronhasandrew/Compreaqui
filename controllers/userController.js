@@ -292,7 +292,7 @@ router.put('/user/:id', async (req, res) => {
           })
         } else {
           const client = new Client({ id: id, ...req.body })
-          pool.query('UPDATE client SET name = $1, adress = $2 email = $3, login = $4 WHERE id = $5', [ client.getName(), client.getAdress(), client.getEmail(), client.getLogin(), client.getId() ], (err, result) => {
+          pool.query('UPDATE client SET name = $1, adress = $2, email = $3, login = $4 WHERE id = $5', [ client.getName(), client.getAdress(), client.getEmail(), client.getLogin(), client.getId() ], (err, result) => {
             if (err)
               throw err
             res.status(201).send({ result: result.rowCount });
