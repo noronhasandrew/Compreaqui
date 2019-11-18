@@ -218,6 +218,27 @@ router.get('/category-products/:id', async (req, res) => {
   }
 })
 
+//Retorna um produto de acordo com o id fornecido
+router.get('/product/:id', (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('SELECT * FROM product WHERE id = $1', [ id ], (err, result) => {
+      if (err)
+        throw err
+
+      //Transformando arquivo para base64
+      const imgName = result.rows[0].photo
+      result.rows[0].photo = base64_encode('./uploads/' + imgName)
+      console.log(result.rows[0])
+      
+      res.status(201).send(result.rows[0]);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao cadastrar produto" });
+  }
+})
+
 
 
 
@@ -498,27 +519,6 @@ router.put('/admin/product/:id', upload.single('file'), (req, res) => {
   } catch(err) {
       console.log(err)
       res.status(400).json({ error: "Falha ao atualizar produto" });
-  }
-})
-
-//Retorna um produto de acordo com o id fornecido
-router.get('/admin/product/:id', (req, res) => {
-  const { id } = req.params
-  try {
-    pool.query('SELECT * FROM product WHERE id = $1', [ id ], (err, result) => {
-      if (err)
-        throw err
-
-      //Transformando arquivo para base64
-      const imgName = result.rows[0].photo
-      result.rows[0].photo = base64_encode('./uploads/' + imgName)
-      console.log(result.rows[0])
-      
-      res.status(201).send(result.rows[0]);
-    })
-  } catch(err) {
-      console.log(err)
-      res.status(400).json({ error: "Falha ao cadastrar produto" });
   }
 })
 
