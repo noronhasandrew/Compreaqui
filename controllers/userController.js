@@ -5,6 +5,7 @@ const Client = require('../models/client');
 const Admin = require('../models/admin');
 const Category = require('../models/category');
 const Product = require('../models/product');
+const Purchase = require('../models/purchase');
 const multer = require('multer');
 const axios = require('axios')
 const fs = require('fs')
@@ -238,6 +239,72 @@ router.get('/product/:id', (req, res) => {
       res.status(400).json({ error: "Falha ao cadastrar produto" });
   }
 })
+
+
+//Retorna a quantidade de um produto de acordo com o id fornecido
+router.get('/product-amount/:id', (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('SELECT amount FROM product WHERE id = $1', [ id ], (err, result) => {
+      if (err)
+        throw err
+      res.status(201).send(result.rows[0]);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao retornar quantidade de produto" });
+  }
+})
+
+//Adiciona uma nova compra
+router.post('/add-purchase', (req, res) => {
+  const purchase = req.body
+  try {
+    pool.query('INSERT INTO purchase (id, date/hour, client_id) VALUES (default, $1, $2)', [ new Date(), purchase.client_id], (err, result) => {
+      if (err)
+        throw err
+      res.status(201).send(result);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao adicionar compra" });
+  }
+})
+
+
+//Requisição de compra
+router.post('/purchase', async (req, res) => {
+  const products = req.body
+  try {
+    products.map((value) => {
+      var product = value
+      axios({method: 'GET', url: `http://localhost:3000/api/product-amount/${product.id}`}).then(
+        (response) => {
+          if (response.data.amount >= product.amount) {
+            axios({method: 'PUT', url: `http://localhost:3000/api/decrease-product-amount/${product.id}`}).then(
+              (response) => {
+                  if (response.data.rowCount){
+                    axios({method: 'POST', url: `http://localhost:3000/api/add-purchase`, data: {client_id: 123}}).then(
+                      (response) => {
+                        if (response.data.rowCount) {
+                          console.log("Deu certo")
+                        }
+                      }
+                    )
+                  }
+              }
+            )
+            console.log("Produto com estoque")
+          } else {
+            console.log("Produto sem estoque")
+          }
+        }
+      )
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha" });
+  }
+});
 
 
 
