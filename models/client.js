@@ -61,7 +61,7 @@ class Client {
     }
 
     generateToken() {
-        return jwt.sign({ id: this.id, isAdmin: false }, process.env.SECRET, {
+        return jwt.sign({ userId: this._id, isAdmin: false }, process.env.SECRET, {
           expiresIn: 86400
         });
       }

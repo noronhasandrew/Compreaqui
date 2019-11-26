@@ -56,7 +56,7 @@ class Admin {
     }
 
     generateToken() {
-        return jwt.sign({ id: this.id, isAdmin: true }, process.env.SECRET, {
+        return jwt.sign({ userId: this._id, isAdmin: true }, process.env.SECRET, {
           expiresIn: 86400
         });
       }

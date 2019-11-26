@@ -12,6 +12,7 @@ const fs = require('fs')
 const bcrypt = require('bcryptjs');
 const validate = require('../middlewares/validation');
 require('dotenv').config();
+const jwt = require("jsonwebtoken");
 
 
 
@@ -242,7 +243,7 @@ router.get('/product/:id', (req, res) => {
 
 
 //Retorna a quantidade de um produto de acordo com o id fornecido
-router.get('/product-amount/:id', (req, res) => {
+router.get('/product-amount/:id', async (req, res) => {
   const { id } = req.params
   try {
     pool.query('SELECT amount FROM product WHERE id = $1', [ id ], (err, result) => {
@@ -257,10 +258,10 @@ router.get('/product-amount/:id', (req, res) => {
 })
 
 //Adiciona uma nova compra
-router.post('/add-purchase', (req, res) => {
+router.post('/add-purchase', async (req, res) => {
   const purchase = req.body
   try {
-    pool.query('INSERT INTO purchase (id, date/hour, client_id) VALUES (default, $1, $2)', [ new Date(), purchase.client_id], (err, result) => {
+    pool.query('INSERT INTO purchase (id, date_time, client_id) VALUES (default, $1, $2) RETURNING id', [ new Date(), purchase.client_id], (err, result) => {
       if (err)
         throw err
       res.status(201).send(result);
@@ -271,10 +272,61 @@ router.post('/add-purchase', (req, res) => {
   }
 })
 
+//Adiciona um novo registro de compra a compra-produto
+router.post('/add-purchase-product', async (req, res) => {
+  const purchase = req.body
+  console.log(purchase)
+  try {
+    pool.query('INSERT INTO purchase_product (product_id, purchase_id, amount) VALUES ($1, $2, $3)', [ purchase.product_id, purchase.purchase_id, purchase.amount ], (err, result) => {
+      if (err)
+        throw err
+      res.status(201).send(result);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao adicionar compra" });
+  }
+})
+
+//Atualiza a quantidade de um produto de acordo com o id fornecido
+router.put('/decrease-product-amount/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('UPDATE product SET amount = amount - 1 WHERE id = $1', [ id ], (err, result) => {
+      if (err)
+        throw err
+      res.status(201).send(result);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao atualizar quantidade de produto" });
+  }
+})
+
+
+
+
+
+//A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
+router.use(authMiddleware);
+
+
+
+
 
 //Requisição de compra
-router.post('/purchase', async (req, res) => {
+router.post('/purchase', (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).send({ error: "Token não encontrado" });
+  }
+
   const products = req.body
+  var counter = 0
+  const [scheme, token] = authHeader.split(" ");
+  const decoded = (jwt.verify)(token, process.env.SECRET)
+
   try {
     products.map((value) => {
       var product = value
@@ -284,10 +336,18 @@ router.post('/purchase', async (req, res) => {
             axios({method: 'PUT', url: `http://localhost:3000/api/decrease-product-amount/${product.id}`}).then(
               (response) => {
                   if (response.data.rowCount){
-                    axios({method: 'POST', url: `http://localhost:3000/api/add-purchase`, data: {client_id: 123}}).then(
+                    axios({method: 'POST', url: `http://localhost:3000/api/add-purchase`, data: {client_id: decoded.userId}}).then(
                       (response) => {
                         if (response.data.rowCount) {
-                          console.log("Deu certo")
+                          axios({method: 'POST', url: `http://localhost:3000/api/add-purchase-product`, data: {purchase_id: response.data.rows[0].id, product_id: product.id, amount: product.amount}}).then(
+                            (response) => {
+                              if (response.data.rowCount) {
+                                counter++;
+                                if (counter == products.length)
+                                  return res.status(200).send({ result: true });
+                              }
+                            }
+                          )
                         }
                       }
                     )
@@ -305,18 +365,6 @@ router.post('/purchase', async (req, res) => {
       res.status(400).json({ error: "Falha" });
   }
 });
-
-
-
-
-
-
-//A partir deste ponto para baixo, o usuário precisa fornecer um token válido para realizar qualquer das operações
-router.use(authMiddleware);
-
-
-
-
 
 
 //Atualiza senha de acordo com o id fornecido
