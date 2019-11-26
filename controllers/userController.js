@@ -506,6 +506,39 @@ router.put('/user-password/:id', async (req, res) => {
   }
 })
 
+//Deleta um produto de uma compra de acordo com o id fornecido
+router.delete('/admin/purchase-produc/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('DELETE FROM purchase_product WHERE purchase_id = $1', [ id ], (err, result) => {
+      if (err)
+        throw err
+      res.status(201).send({ result: result.rowCount });
+    })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar usuário" });
+  }
+})
+
+//Deleta uma compra de acordo com o id fornecido
+router.delete('/admin/purchase/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    axios({ method: 'DELETE', url: `http://localhost:3000/api/admin/purchase-produc/${id}`, headers: { authorization: req.headers.authorization }}).then(
+      (response)=>{
+        if (response.data.result) {
+          pool.query('DELETE FROM purchase WHERE id = $1', [ id ], (err, result) => {
+            if (err)
+              throw err
+            res.status(200).send({ result: result.rowCount });
+          })
+        }
+      })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao deletar compra" });
+  }
+})
+
 //Atualiza usuário de acordo com o id fornecido
 router.put('/user/:id', async (req, res) => {
   const { id } = req.params
