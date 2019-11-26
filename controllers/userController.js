@@ -290,9 +290,9 @@ router.post('/add-purchase-product', async (req, res) => {
 
 //Atualiza a quantidade de um produto de acordo com o id fornecido
 router.put('/decrease-product-amount/:id', async (req, res) => {
-  const { id } = req.params
+  const { id, amount } = {...req.params, ...req.body}
   try {
-    pool.query('UPDATE product SET amount = amount - 1 WHERE id = $1', [ id ], (err, result) => {
+    pool.query('UPDATE product SET amount = amount - $1 WHERE id = $2', [ amount, id ], (err, result) => {
       if (err)
         throw err
       res.status(201).send(result);
@@ -315,7 +315,7 @@ router.use(authMiddleware);
 
 
 //Requisição de compra
-router.post('/purchase', (req, res) => {
+router.post('/purchase', async (req, res) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -324,45 +324,57 @@ router.post('/purchase', (req, res) => {
 
   const products = req.body
   var counter = 0
+  var outStock = false
   const [scheme, token] = authHeader.split(" ");
   const decoded = (jwt.verify)(token, process.env.SECRET)
 
   try {
-    products.map((value) => {
-      var product = value
+    products.map((product, index) => {
       axios({method: 'GET', url: `http://localhost:3000/api/product-amount/${product.id}`}).then(
         (response) => {
-          if (response.data.amount >= product.amount) {
-            axios({method: 'PUT', url: `http://localhost:3000/api/decrease-product-amount/${product.id}`}).then(
-              (response) => {
-                  if (response.data.rowCount){
-                    axios({method: 'POST', url: `http://localhost:3000/api/add-purchase`, data: {client_id: decoded.userId}}).then(
-                      (response) => {
-                        if (response.data.rowCount) {
-                          axios({method: 'POST', url: `http://localhost:3000/api/add-purchase-product`, data: {purchase_id: response.data.rows[0].id, product_id: product.id, amount: product.amount}}).then(
-                            (response) => {
-                              if (response.data.rowCount) {
-                                counter++;
-                                if (counter == products.length)
-                                  return res.status(200).send({ result: true });
-                              }
-                            }
-                          )
-                        }
-                      }
-                    )
-                  }
-              }
-            )
-            console.log("Produto com estoque")
-          } else {
-            console.log("Produto sem estoque")
+          if (response.data.amount < product.amount){
+            outStock = true
+            return outStock
           }
+          return outStock
+      }).then((stk) => {
+        if (stk) {
+          res.status(200).send({ result: false });
+        } else {
+          if (index == products.length-1)
+            goPurchase()
         }
-      )
+      })
     })
+
+    const goPurchase = () => {
+        products.map((value) => {
+          var product = value
+          axios({method: 'PUT', url: `http://localhost:3000/api/decrease-product-amount/${product.id}`, data: {amount: product.amount}}).then(
+            (response) => {
+                if (response.data.rowCount){
+                  axios({method: 'POST', url: `http://localhost:3000/api/add-purchase`, data: {client_id: decoded.userId}}).then(
+                    (response) => {
+                      if (response.data.rowCount) {
+                        axios({method: 'POST', url: `http://localhost:3000/api/add-purchase-product`, data: {purchase_id: response.data.rows[0].id, product_id: product.id, amount: product.amount}}).then(
+                          (response) => {
+                            if (response.data.rowCount) {
+                              counter++;
+                              if (counter == products.length)
+                                return res.status(200).send({ result: true });
+                            }
+                          }
+                        )
+                      }
+                    }
+                  )
+                }
+            }
+          )
+      })
+    }
   } catch(err) {
-      res.status(400).json({ error: "Falha" });
+      res.status(400).json({ error: "Falha ao processar compra" });
   }
 });
 
