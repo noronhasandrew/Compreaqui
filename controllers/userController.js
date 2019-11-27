@@ -12,6 +12,7 @@ const fs = require('fs')
 const bcrypt = require('bcryptjs');
 const validate = require('../middlewares/validation');
 require('dotenv').config();
+const dateFormat = require('dateformat');
 const jwt = require("jsonwebtoken");
 
 
@@ -256,10 +257,11 @@ router.get('/product-amount/:id', async (req, res) => {
 })
 
 //Adiciona uma nova compra
-router.post('/add-purchase', async (req, res) => {
+router.post('/admin/add-purchase', async (req, res) => {
   const purchase = req.body
+  const now = new Date()
   try {
-    pool.query('INSERT INTO purchase (id, date_time, client_id) VALUES (default, $1, $2) RETURNING id', [ new Date(), purchase.client_id], (err, result) => {
+    pool.query('INSERT INTO purchase (id, date_time, client_id) VALUES (default, $1, $2) RETURNING id', [ dateFormat(now, "dd-mm-yyyy, h:MM:ss TT") , purchase.client_id], (err, result) => {
       if (err)
         throw err
       res.status(201).send(result);
@@ -271,7 +273,7 @@ router.post('/add-purchase', async (req, res) => {
 })
 
 //Adiciona um novo registro de compra a compra-produto
-router.post('/add-purchase-product', async (req, res) => {
+router.post('/admin/add-purchase-product', async (req, res) => {
   const purchase = req.body
   console.log(purchase)
   try {
@@ -287,7 +289,7 @@ router.post('/add-purchase-product', async (req, res) => {
 })
 
 //Atualiza a quantidade de um produto de acordo com o id fornecido
-router.put('/decrease-product-amount/:id', async (req, res) => {
+router.put('/admin/decrease-product-amount/:id', async (req, res) => {
   const { id, amount } = {...req.params, ...req.body}
   try {
     pool.query('UPDATE product SET amount = amount - $1 WHERE id = $2', [ amount, id ], (err, result) => {
@@ -346,31 +348,40 @@ router.post('/purchase', async (req, res) => {
     })
 
     const goPurchase = () => {
-        products.map((value) => {
+        products.map((value, index) => {
           var product = value
-          axios({method: 'PUT', url: `http://localhost:3000/api/decrease-product-amount/${product.id}`, data: {amount: product.amount}}).then(
+          axios({method: 'PUT', url: `http://localhost:3000/api/admin/decrease-product-amount/${product.id}`, data: {amount: product.amount}}).then(
             (response) => {
                 if (response.data.rowCount){
-                  axios({method: 'POST', url: `http://localhost:3000/api/add-purchase`, data: {client_id: decoded.userId}}).then(
-                    (response) => {
-                      if (response.data.rowCount) {
-                        axios({method: 'POST', url: `http://localhost:3000/api/add-purchase-product`, data: {purchase_id: response.data.rows[0].id, product_id: product.id, amount: product.amount}}).then(
-                          (response) => {
-                            if (response.data.rowCount) {
-                              counter++;
-                              if (counter == products.length)
-                                return res.status(200).send({ result: true });
-                            }
-                          }
-                        )
-                      }
-                    }
-                  )
+                  if (index == products.length - 1)
+                    goAddPurchase()
                 }
-            }
-          )
-      })
+            })
+        })
     }
+
+      const goAddPurchase = () => {
+        axios({method: 'POST', url: `http://localhost:3000/api/admin/add-purchase`, data: {client_id: decoded.userId}}).then(
+          (response) => {
+            if (response.data.rowCount) {
+              goAddProductPurchase(response.data.rows[0].id)
+            }
+          })
+      }
+
+      const goAddProductPurchase = (purchase_id) => {
+        products.map((value, index) => {
+          var product = value
+          axios({method: 'POST', url: `http://localhost:3000/api/admin/add-purchase-product`, data: {purchase_id: purchase_id, product_id: product.id, amount: product.amount}}).then(
+            (response) => {
+              if (response.data.rowCount) {
+                if (index == products.length -1)
+                  return res.status(200).send({ result: true });
+              }
+            })
+        })
+    }
+
   } catch(err) {
       res.status(400).json({ error: "Falha ao processar compra" });
   }
@@ -391,13 +402,37 @@ router.get('/admin/clients', async (req, res) => {
 })
 
 //Retorna todos as compras de acordo com o id do client
-router.get('/admin/purchase/:id', async (req, res) => {
+router.get('/admin/purchase-product/:id', async (req, res) => {
   const { id } = req.params
   try {
-    pool.query('SELECT * FROM purchase as p, purchase_product AS pp WHERE p.id = pp.purchase_id AND p.client_id = $1', [ id ], (err, result) => {
+    pool.query('SELECT * FROM purchase as p, purchase_product AS pp WHERE p.id = pp.purchase_id AND p.id = $1', [ id ], (err, result) => {
       if (err)
         throw err
-      res.status(201).send(result.rows);
+      const purchases = result.rows;
+      purchases.map((value, index) => {
+        axios({ method: 'GET', url: `http://localhost:3000/api/product/${value.product_id}`}).then(
+          (response) => {
+            value.product = response.data
+            if (index >= purchases.length-1){
+              return res.status(200).send(purchases);
+            }
+          })
+      })
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao retornar quantidade de produto" });
+  }
+})
+
+//Retorna todos as compras de acordo com o id do client
+router.get('/admin/purchases/:id', async (req, res) => {
+  const { id } = req.params
+  try {
+    pool.query('SELECT id FROM purchase WHERE client_id = $1', [ id ], (err, result) => {
+      if (err)
+        throw err
+      return res.status(200).send(result.rows);
     })
   } catch(err) {
       console.log(err)
@@ -410,29 +445,25 @@ router.get('/admin/clients-purchase', async (req, res) => {
   try {
     axios({ method: 'GET', url: 'http://localhost:3000/api/admin/clients', headers: { authorization: req.headers.authorization }}).then(
       (response) => {
-        var clients = response.data
-        addPurchase(clients)
+        clients = response.data
+        getPurchases()
       }).catch((e) => {
           console.log(e)
       })
 
-    function addPurchase(clients) {
-      clients.map((value) => {
-        axios({ method: 'GET', url: `http://localhost:3000/api/admin/purchase/${value.id}`, headers: { authorization: req.headers.authorization }}).then(
+    function getPurchases() {
+      clients.map((value, idx, clnts) => {
+        axios({ method: 'GET', url: `http://localhost:3000/api/admin/purchases/${value.id}`, headers: { authorization: req.headers.authorization }}).then(
           (response) => {
-            var purchases = response.data
-            value.purchases = purchases
-
-            value.purchases.map((value, index, pchases) => {
-              axios({ method: 'GET', url: `http://localhost:3000/api/product/${value.product_id}`}).then(
+            value.purchases = response.data
+            value.purchases.map((value, index, prch) => {
+              axios({ method: 'GET', url: `http://localhost:3000/api/admin/purchase-product/${value.id}`, headers: { authorization: req.headers.authorization }}).then(
                 (response) => {
-                  var product = response.data
-                  pchases[index].product = product
-                  if (index == pchases.length - 1)
-                    return res.status(200).send(clients);
+                  value.purchase = response.data
+                  if (idx == clnts.length-1 && index == prch.length-1)
+                    res.status(200).send(clnts);
                 })
-              })
-              
+            })
           }).catch((e) => {
             console.log(e)
             res.status(400).json({ error: "Falha ao retornar compras" });
