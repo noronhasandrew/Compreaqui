@@ -413,7 +413,7 @@ router.get('/admin/purchase-product/:id', async (req, res) => {
         axios({ method: 'GET', url: `http://localhost:3000/api/product/${value.product_id}`}).then(
           (response) => {
             value.product = response.data
-            if (index >= purchases.length-1){
+            if (index == purchases.length-1){
               return res.status(200).send(purchases);
             }
           })
@@ -440,8 +440,41 @@ router.get('/admin/purchases/:id', async (req, res) => {
   }
 })
 
+
+//Retorna todos as compras de um cliente e seus produtos
+router.get('/historic/:id', async (req, res) => {
+  var purchases;
+  const { id } = req.params
+  try {
+        axios({ method: 'GET', url: `http://localhost:3000/api/admin/purchases/${id}`, headers: { authorization: req.headers.authorization }}).then(
+          (response) => {
+            var cont = 0
+            purchases = response.data
+            purchases.map((value, index, prch) => {
+              axios({ method: 'GET', url: `http://localhost:3000/api/admin/purchase-product/${value.id}`, headers: { authorization: req.headers.authorization }}).then(
+                (response) => {
+                  var counter = 0
+                  cont++
+                  value.purchases = response.data
+                  value.purchases.map((value, index, prchses)=>{
+                    counter++
+                    if (cont == purchases.length && counter == prchses.length)
+                      res.status(200).send(purchases);
+                  })
+                })
+            })
+          }).catch((e) => {
+            console.log(e)
+            res.status(400).json({ error: "Falha ao retornar compras" });
+          })
+  } catch(err) {
+      res.status(400).json({ error: "Falha ao retornar compras" });
+  }
+})
+
 //Retorna todos os clientes e suas respectivas compras com todas as informações
 router.get('/admin/clients-purchase', async (req, res) => {
+  var clients;
   try {
     axios({ method: 'GET', url: 'http://localhost:3000/api/admin/clients', headers: { authorization: req.headers.authorization }}).then(
       (response) => {
@@ -452,15 +485,19 @@ router.get('/admin/clients-purchase', async (req, res) => {
       })
 
     function getPurchases() {
+      var counter = 0
       clients.map((value, idx, clnts) => {
+        var cont = 0
         axios({ method: 'GET', url: `http://localhost:3000/api/admin/purchases/${value.id}`, headers: { authorization: req.headers.authorization }}).then(
           (response) => {
+            counter++
             value.purchases = response.data
             value.purchases.map((value, index, prch) => {
               axios({ method: 'GET', url: `http://localhost:3000/api/admin/purchase-product/${value.id}`, headers: { authorization: req.headers.authorization }}).then(
                 (response) => {
+                  cont++
                   value.purchase = response.data
-                  if (idx == clnts.length-1 && index == prch.length-1)
+                  if ((counter == clnts.length) && (cont == prch.length))
                     res.status(200).send(clnts);
                 })
             })
