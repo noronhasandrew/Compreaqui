@@ -202,6 +202,27 @@ router.get('/products', (req, res) => {
   }
 })
 
+//Retorna todos os produtos sem estoque
+router.get('/admin/products-outstock', (req, res) => {
+  try {
+    pool.query('SELECT * FROM product WHERE amount = 0', (err, result) => {
+      if (err)
+        throw err
+
+
+      result.rows.map((value, index) => {
+        var imgName = value.photo
+        result.rows[index].photo = base64_encode('./uploads/' + imgName)
+      })
+      
+      res.status(201).send(result.rows);
+    })
+  } catch(err) {
+      console.log(err)
+      res.status(400).json({ error: "Falha ao retornar produtos" });
+  }
+})
+
 //Retorna todos os produtos de uma categoria de acordo com o id fornecido
 router.get('/category-products/:id', async (req, res) => {
   const category = new Category(req.params)
